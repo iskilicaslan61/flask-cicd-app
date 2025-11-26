@@ -70,8 +70,9 @@ pipeline {
                     echo "🚀 Starting Flask application on port ${APP_PORT}..."
                     . venv/bin/activate
 
-                    # Start gunicorn in background using nohup
-                    nohup gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app > gunicorn.log 2>&1 &
+                    # Use setsid to detach from Jenkins process group
+                    # This prevents Jenkins from killing the process when job completes
+                    BUILD_ID=dontKillMe nohup setsid gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app > gunicorn.log 2>&1 &
 
                     # Save PID for later management
                     echo $! > gunicorn.pid
@@ -82,6 +83,7 @@ pipeline {
                     # Verify process is running
                     if ps -p $(cat gunicorn.pid) > /dev/null 2>&1; then
                         echo "✅ Application deployed successfully! PID: $(cat gunicorn.pid)"
+                        ps -p $(cat gunicorn.pid) -o pid,ppid,cmd
                     else
                         echo "❌ Failed to start application"
                         cat gunicorn.log
