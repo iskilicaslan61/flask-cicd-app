@@ -62,20 +62,39 @@ pipeline {
             steps {
                 echo '🚀 Deploying application...'
                 sh '''
-                    # Make start script executable
-                    chmod +x start_app.sh
+                    # Kill any existing processes
+                    pkill -f "gunicorn.*app:app" || true
+                    sleep 2
 
-                    # Run the start script using 'at' command to detach completely from Jenkins
-                    # This ensures the process survives after Jenkins job completes
-                    echo "bash $PWD/start_app.sh" | at now
+                    # Activate virtual environment
+                    . venv/bin/activate
+
+                    # Start gunicorn with complete detachment from Jenkins
+                    # Using subshell, disown, and redirecting all file descriptors
+                    (
+                        # Close stdin, stdout, stderr
+                        exec 0</dev/null
+                        exec 1>gunicorn.log
+                        exec 2>&1
+
+                        # Start gunicorn in new session
+                        setsid gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app &
+
+                        # Save PID
+                        echo $! > gunicorn.pid
+
+                        # Disown to remove from job table
+                        disown
+                    ) &
 
                     # Wait for application to start
+                    echo "⏳ Waiting for application to start..."
                     sleep 5
 
                     # Verify process is running
                     if pgrep -f "gunicorn.*app:app" > /dev/null; then
                         echo "✅ Application deployed successfully!"
-                        ps aux | grep "gunicorn.*app:app" | grep -v grep
+                        ps aux | grep "gunicorn.*app:app" | grep -v grep | head -3
                     else
                         echo "❌ Failed to start application"
                         cat gunicorn.log 2>/dev/null || echo "No log file yet"
