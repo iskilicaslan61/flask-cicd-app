@@ -5,7 +5,7 @@ pipeline {
         APP_NAME = 'flask-cicd-app'
         APP_DIR = '/opt/flask-app'
         PYTHON_ENV = '/opt/flask-app/venv'
-        GIT_REPO = 'https://github.com/ondiacademy/ondia-aws-devops-12.git'
+        GIT_REPO = 'https://github.com/iskilicaslan61/flask-cicd-app.git'
         APP_PORT = '5000'
     }
 
@@ -21,7 +21,7 @@ pipeline {
             steps {
                 echo '🔧 Setting up Python virtual environment...'
                 sh '''
-                    cd Jenkin-uygulama/Python-flask-app-jenkins
+                    
 
                     # Create virtual environment if it doesn't exist
                     if [ ! -d "venv" ]; then
@@ -40,7 +40,7 @@ pipeline {
             steps {
                 echo '🧪 Running application tests...'
                 sh '''
-                    cd Jenkin-uygulama/Python-flask-app-jenkins
+                    
                     . venv/bin/activate
 
                     # Test if Flask app can be imported
@@ -56,7 +56,7 @@ pipeline {
             steps {
                 echo '🏗️ Building application...'
                 sh '''
-                    cd Jenkin-uygulama/Python-flask-app-jenkins
+                    
                     echo "Build timestamp: $(date)" > build_info.txt
                     echo "Git commit: $(git rev-parse --short HEAD)" >> build_info.txt
                     echo "Jenkins build: ${BUILD_NUMBER}" >> build_info.txt
@@ -68,7 +68,7 @@ pipeline {
             steps {
                 echo '🚀 Deploying application...'
                 sh '''
-                    cd Jenkin-uygulama/Python-flask-app-jenkins
+                    
 
                     # Create deployment directory if it doesn't exist
                     sudo mkdir -p ${APP_DIR}
