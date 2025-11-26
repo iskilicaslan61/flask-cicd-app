@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Hakkında - Flask App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="about-section">
+        <h1 class="page-title">Proje Hakkında</h1>
+
+        <div class="about-content">
+            <div class="info-card">
+                <h2>🎯 Proje Amacı</h2>
+                <p>Bu proje, Flask web framework kullanarak modern bir web uygulaması geliştirmeyi ve Jenkins CI/CD pipeline ile otomatik deployment sürecini göstermektedir.</p>
+            </div>
+
+            <div class="info-card">
+                <h2>🛠️ Kullanılan Teknolojiler</h2>
+                <ul class="tech-list">
+                    <li><strong>Backend:</strong> Python Flask Framework</li>
+                    <li><strong>Frontend:</strong> HTML5, CSS3, Vanilla JavaScript</li>
+                    <li><strong>CI/CD:</strong> Jenkins Pipeline</li>
+                    <li><strong>Version Control:</strong> Git & GitHub</li>
+                    <li><strong>Deployment:</strong> Automated with Systemd</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h2>🔄 CI/CD Pipeline</h2>
+                <p>Her Git push işleminde Jenkins otomatik olarak:</p>
+                <ol class="pipeline-steps">
+                    <li>Kodu GitHub'dan çeker</li>
+                    <li>Bağımlılıkları yükler</li>
+                    <li>Uygulamayı test eder</li>
+                    <li>Production ortamına deploy eder</li>
+                    <li>Servisi yeniden başlatır</li>
+                </ol>
+            </div>
+
+            <div class="info-card">
+                <h2>✨ Özellikler</h2>
+                <ul class="features-list">
+                    <li>Responsive ve modern tasarım</li>
+                    <li>Mavi tonlarında profesyonel renk paleti</li>
+                    <li>Gerçek zamanlı ziyaretçi takibi</li>
+                    <li>RESTful API endpoints</li>
+                    <li>Otomatik deployment sistemi</li>
+                    <li>Health check endpoint</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h2>📚 ONDIA Academy</h2>
+                <p>Bu proje ONDIA Academy DevOps eğitim programı kapsamında geliştirilmiştir. Jenkins, Docker, Kubernetes ve diğer DevOps araçlarını öğrenmek için harika bir başlangıç noktasıdır.</p>
+            </div>
+
+            <div class="cta-section">
+                <a href="/" class="btn btn-primary">Ana Sayfaya Dön</a>
+                <a href="https://github.com" target="_blank" class="btn btn-secondary">GitHub'da Görüntüle</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

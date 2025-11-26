@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Ana Sayfa - Flask App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Jenkins CI/CD ile Otomatik Deployment</h1>
+            <p class="hero-subtitle">Her push ile otomatik güncellenen modern Flask uygulaması</p>
+            <div class="stats-card">
+                <div class="stat-item">
+                    <span class="stat-number">{{ visit_count }}</span>
+                    <span class="stat-label">Toplam Ziyaret</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="visitor-count">0</span>
+                    <span class="stat-label">Kayıtlı Ziyaretçi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="features-section">
+        <h2 class="section-title">Özellikler</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>Otomatik CI/CD</h3>
+                <p>Jenkins pipeline ile her push'ta otomatik build ve deploy</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Modern Tasarım</h3>
+                <p>Mavi tonlarında profesyonel ve responsive arayüz</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Hızlı ve Hafif</h3>
+                <p>Flask framework ile optimize edilmiş performans</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Gerçek Zamanlı</h3>
+                <p>API ile dinamik veri yönetimi ve istatistikler</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h2 class="section-title">Ziyaretçi Defteri</h2>
+        <div class="form-card">
+            <form id="visitor-form">
+                <div class="form-group">
+                    <label for="name">İsminiz</label>
+                    <input type="text" id="name" name="name" required placeholder="Adınızı girin">
+                </div>
+                <div class="form-group">
+                    <label for="message">Mesajınız</label>
+                    <textarea id="message" name="message" rows="4" required placeholder="Bir mesaj bırakın..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Gönder</button>
+            </form>
+            <div id="message-status" class="message-status"></div>
+        </div>
+
+        <div class="visitors-list" id="visitors-list">
+            <h3>Son Ziyaretçiler</h3>
+            <div id="visitors-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    loadVisitors();
+
+    document.getElementById('visitor-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value;
+        const message = document.getElementById('message').value;
+
+        try {
+            const response = await fetch('/api/visitors', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, message })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showMessage('Mesajınız kaydedildi!', 'success');
+                document.getElementById('visitor-form').reset();
+                loadVisitors();
+            }
+        } catch (error) {
+            showMessage('Bir hata oluştu!', 'error');
+        }
+    });
+
+    function showMessage(text, type) {
+        const statusDiv = document.getElementById('message-status');
+        statusDiv.textContent = text;
+        statusDiv.className = `message-status ${type}`;
+        setTimeout(() => {
+            statusDiv.className = 'message-status';
+        }, 3000);
+    }
+
+    async function loadVisitors() {
+        try {
+            const response = await fetch('/api/visitors');
+            const data = await response.json();
+
+            document.getElementById('visitor-count').textContent = data.count;
+
+            const visitorsContent = document.getElementById('visitors-content');
+            if (data.visitors.length === 0) {
+                visitorsContent.innerHTML = '<p class="no-visitors">Henüz ziyaretçi yok. İlk ziyaretçi siz olun!</p>';
+            } else {
+                visitorsContent.innerHTML = data.visitors.slice(-5).reverse().map(visitor => `
+                    <div class="visitor-item">
+                        <div class="visitor-header">
+                            <strong>${visitor.name}</strong>
+                            <span class="visitor-time">${visitor.timestamp}</span>
+                        </div>
+                        <p class="visitor-message">${visitor.message}</p>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading visitors:', error);
+        }
+    }
+
+    setInterval(loadVisitors, 30000);
+</script>
+{% endblock %}
