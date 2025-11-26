@@ -60,44 +60,33 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo '🚀 Deploying application...'
+                echo '🚀 Deploying application with systemd...'
                 sh '''
-                    # Kill any existing processes
-                    pkill -f "gunicorn.*app:app" || true
-                    sleep 2
+                    # Copy systemd service file
+                    sudo cp flask-app.service /etc/systemd/system/
 
-                    # Activate virtual environment
-                    . venv/bin/activate
+                    # Reload systemd to recognize new service
+                    sudo systemctl daemon-reload
 
-                    # Start gunicorn with complete detachment from Jenkins
-                    # Using subshell, disown, and redirecting all file descriptors
-                    (
-                        # Close stdin, stdout, stderr
-                        exec 0</dev/null
-                        exec 1>gunicorn.log
-                        exec 2>&1
+                    # Enable service to start on boot
+                    sudo systemctl enable flask-app
 
-                        # Start gunicorn in new session
-                        setsid gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app &
+                    # Restart the service (will start if not running, restart if running)
+                    sudo systemctl restart flask-app
 
-                        # Save PID
-                        echo $! > gunicorn.pid
+                    # Wait for service to start
+                    sleep 3
 
-                        # Disown to remove from job table
-                        disown
-                    ) &
-
-                    # Wait for application to start
-                    echo "⏳ Waiting for application to start..."
-                    sleep 5
+                    # Check service status
+                    sudo systemctl status flask-app --no-pager || true
 
                     # Verify process is running
-                    if pgrep -f "gunicorn.*app:app" > /dev/null; then
-                        echo "✅ Application deployed successfully!"
+                    if sudo systemctl is-active --quiet flask-app; then
+                        echo "✅ Application deployed successfully via systemd!"
                         ps aux | grep "gunicorn.*app:app" | grep -v grep | head -3
                     else
                         echo "❌ Failed to start application"
-                        cat gunicorn.log 2>/dev/null || echo "No log file yet"
+                        sudo journalctl -u flask-app -n 20 --no-pager
                         exit 1
                     fi
                 '''
@@ -116,8 +105,11 @@ pipeline {
 
                     if [ "$response" = "200" ]; then
                         echo "✅ Health check passed! Application is running."
+                        echo "📊 Application info:"
+                        curl -s http://localhost:${APP_PORT}/health | python3 -m json.tool || true
                     else
                         echo "❌ Health check failed! HTTP status: $response"
+                        sudo journalctl -u flask-app -n 20 --no-pager
                         exit 1
                     fi
                 '''
@@ -129,13 +121,18 @@ pipeline {
         success {
             echo '✅ Pipeline completed successfully!'
             echo "🎉 Application deployed and running at http://100.29.190.54:${APP_PORT}"
+            echo "📋 Service management commands:"
+            echo "   sudo systemctl status flask-app"
+            echo "   sudo systemctl restart flask-app"
+            echo "   sudo journalctl -u flask-app -f"
         }
         failure {
             echo '❌ Pipeline failed!'
             sh '''
                 echo "Recent application logs:"
                 ps aux | grep gunicorn || true
-                lsof -i:${APP_PORT} || true
+                sudo systemctl status flask-app --no-pager || true
+                sudo journalctl -u flask-app -n 30 --no-pager || true
             '''
         }
         always {
