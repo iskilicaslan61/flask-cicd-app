@@ -62,22 +62,31 @@ pipeline {
             steps {
                 echo '🚀 Deploying application...'
                 sh '''
-                    # Kill any existing Flask process on port 5000
-                    if lsof -ti:${APP_PORT} > /dev/null 2>&1; then
-                        echo "🔄 Killing existing process on port ${APP_PORT}..."
-                        kill -9 $(lsof -ti:${APP_PORT}) || true
-                        sleep 2
-                    fi
+                    # Kill any existing Flask/Gunicorn processes
+                    pkill -f "gunicorn.*app:app" || true
+                    sleep 2
 
                     # Start Flask app with Gunicorn in background
                     echo "🚀 Starting Flask application on port ${APP_PORT}..."
                     . venv/bin/activate
-                    nohup gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 --daemon app:app
+
+                    # Start gunicorn in background using nohup
+                    nohup gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app > gunicorn.log 2>&1 &
+
+                    # Save PID for later management
+                    echo $! > gunicorn.pid
 
                     # Wait for application to start
-                    sleep 3
+                    sleep 5
 
-                    echo "✅ Application deployed successfully!"
+                    # Verify process is running
+                    if ps -p $(cat gunicorn.pid) > /dev/null 2>&1; then
+                        echo "✅ Application deployed successfully! PID: $(cat gunicorn.pid)"
+                    else
+                        echo "❌ Failed to start application"
+                        cat gunicorn.log
+                        exit 1
+                    fi
                 '''
             }
         }

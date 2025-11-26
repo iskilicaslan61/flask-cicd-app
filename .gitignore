@@ -36,3 +36,8 @@ build/
 # Environment
 .env
 .env.local
+
+# Gunicorn
+gunicorn.pid
+gunicorn.log
+nohup.out
