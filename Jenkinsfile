@@ -62,31 +62,23 @@ pipeline {
             steps {
                 echo '🚀 Deploying application...'
                 sh '''
-                    # Kill any existing Flask/Gunicorn processes
-                    pkill -f "gunicorn.*app:app" || true
-                    sleep 2
+                    # Make start script executable
+                    chmod +x start_app.sh
 
-                    # Start Flask app with Gunicorn in background
-                    echo "🚀 Starting Flask application on port ${APP_PORT}..."
-                    . venv/bin/activate
-
-                    # Use setsid to detach from Jenkins process group
-                    # This prevents Jenkins from killing the process when job completes
-                    BUILD_ID=dontKillMe nohup setsid gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app > gunicorn.log 2>&1 &
-
-                    # Save PID for later management
-                    echo $! > gunicorn.pid
+                    # Run the start script using 'at' command to detach completely from Jenkins
+                    # This ensures the process survives after Jenkins job completes
+                    echo "bash $PWD/start_app.sh" | at now
 
                     # Wait for application to start
                     sleep 5
 
                     # Verify process is running
-                    if ps -p $(cat gunicorn.pid) > /dev/null 2>&1; then
-                        echo "✅ Application deployed successfully! PID: $(cat gunicorn.pid)"
-                        ps -p $(cat gunicorn.pid) -o pid,ppid,cmd
+                    if pgrep -f "gunicorn.*app:app" > /dev/null; then
+                        echo "✅ Application deployed successfully!"
+                        ps aux | grep "gunicorn.*app:app" | grep -v grep
                     else
                         echo "❌ Failed to start application"
-                        cat gunicorn.log
+                        cat gunicorn.log 2>/dev/null || echo "No log file yet"
                         exit 1
                     fi
                 '''
