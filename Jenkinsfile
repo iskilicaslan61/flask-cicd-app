@@ -3,10 +3,8 @@ pipeline {
 
     environment {
         APP_NAME = 'flask-cicd-app'
-        APP_DIR = '/opt/flask-app'
-        PYTHON_ENV = '/opt/flask-app/venv'
-        GIT_REPO = 'https://github.com/iskilicaslan61/flask-cicd-app.git'
         APP_PORT = '5000'
+        GIT_REPO = 'https://github.com/iskilicaslan61/flask-cicd-app.git'
     }
 
     stages {
@@ -21,8 +19,6 @@ pipeline {
             steps {
                 echo '🔧 Setting up Python virtual environment...'
                 sh '''
-                    
-
                     # Create virtual environment if it doesn't exist
                     if [ ! -d "venv" ]; then
                         python3 -m venv venv
@@ -40,7 +36,6 @@ pipeline {
             steps {
                 echo '🧪 Running application tests...'
                 sh '''
-                    
                     . venv/bin/activate
 
                     # Test if Flask app can be imported
@@ -56,7 +51,6 @@ pipeline {
             steps {
                 echo '🏗️ Building application...'
                 sh '''
-                    
                     echo "Build timestamp: $(date)" > build_info.txt
                     echo "Git commit: $(git rev-parse --short HEAD)" >> build_info.txt
                     echo "Jenkins build: ${BUILD_NUMBER}" >> build_info.txt
@@ -68,46 +62,22 @@ pipeline {
             steps {
                 echo '🚀 Deploying application...'
                 sh '''
-                    
+                    # Kill any existing Flask process on port 5000
+                    if lsof -ti:${APP_PORT} > /dev/null 2>&1; then
+                        echo "🔄 Killing existing process on port ${APP_PORT}..."
+                        kill -9 $(lsof -ti:${APP_PORT}) || true
+                        sleep 2
+                    fi
 
-                    # Create deployment directory if it doesn't exist
-                    sudo mkdir -p ${APP_DIR}
+                    # Start Flask app with Gunicorn in background
+                    echo "🚀 Starting Flask application on port ${APP_PORT}..."
+                    . venv/bin/activate
+                    nohup gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 --daemon app:app
 
-                    # Copy application files
-                    sudo cp -r * ${APP_DIR}/
+                    # Wait for application to start
+                    sleep 3
 
-                    # Set permissions
-                    sudo chown -R jenkins:jenkins ${APP_DIR}
-
-                    # Create or update systemd service
-                    sudo bash -c 'cat > /etc/systemd/system/flask-app.service << EOF
-[Unit]
-Description=Flask CI/CD Application
-After=network.target
-
-[Service]
-Type=simple
-User=jenkins
-WorkingDirectory=${APP_DIR}
-Environment="PATH=${APP_DIR}/venv/bin"
-ExecStart=${APP_DIR}/venv/bin/gunicorn --bind 0.0.0.0:${APP_PORT} --workers 2 app:app
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-
-                    # Reload systemd and restart service
-                    sudo systemctl daemon-reload
-                    sudo systemctl enable flask-app
-                    sudo systemctl restart flask-app
-
-                    # Wait for service to start
-                    sleep 5
-
-                    # Check service status
-                    sudo systemctl status flask-app --no-pager
+                    echo "✅ Application deployed successfully!"
                 '''
             }
         }
@@ -136,15 +106,18 @@ EOF'
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            echo "🎉 Application deployed and running at http://localhost:${APP_PORT}"
+            echo "🎉 Application deployed and running at http://100.29.190.54:${APP_PORT}"
         }
         failure {
             echo '❌ Pipeline failed!'
-            sh 'sudo journalctl -u flask-app -n 50 --no-pager || true'
+            sh '''
+                echo "Recent application logs:"
+                ps aux | grep gunicorn || true
+                lsof -i:${APP_PORT} || true
+            '''
         }
         always {
-            echo '🧹 Cleaning up...'
-            cleanWs(deleteDirs: true, patterns: [[pattern: 'venv/', type: 'INCLUDE']])
+            echo '🧹 Build completed!'
         }
     }
 }
